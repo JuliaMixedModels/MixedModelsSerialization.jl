@@ -1,3 +1,5 @@
+# using DataFrames
+# using Effects
 using MixedModels
 using MixedModelsSerialization
 using Test
@@ -56,3 +58,24 @@ end
         @test f(fm1) == f(mms)
     end
 end
+
+@testset "JLD2 roundtrip" begin
+    mms2 = mktempdir() do dir
+        fname = joinpath(dir, "test.mmsum")
+        save_summary(fname, mms)
+        return load_summary(fname)
+    end
+
+    @test all(vcov(mms) .== vcov(mms2))
+    @test string(formula(mms)) == string(formula(mms2))
+    # need to test that ContrastCoding is preserved
+    # if we get the Effects.jl stuff working, then
+    # we can test by comparing effects output
+end
+
+# need typify support or a way to create a pseudo modelmatrix()
+# @testset "Effects.jl compat" begin
+#     design = Dict(:spkr => ["old", "new"])
+#     refgrid = DataFrame(; spkr=["old", "new"],)
+#     effects(design, mms)
+# end

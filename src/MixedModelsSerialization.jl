@@ -9,6 +9,12 @@ using StatsBase
 using StatsFuns
 using StatsModels
 
+using JLD2
+# using FileIO: File, @format_str
+
+export MixedModelSummary, LinearMixedModelSummary
+export save_summary, load_summary
+
 """
     MixedModelSummary{T} <: MixedModel{T}
     MixedModelSummary(m::LinearMixedModel)
@@ -67,11 +73,9 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     pca::NamedTuple # MixedModels.PCA
 end
 
-export MixedModelSummary, LinearMixedModelSummary
+MixedModelSummary(m::LinearMixedModel) = LinearMixedModelSummary(m)
 
- MixedModelSummary(m::LinearMixedModel) = LinearMixedModelSummary(m)
-
- function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
+function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     β = coef(m)
     cnames = coefnames(m)
     se = stderror(m)
@@ -148,6 +152,32 @@ end
 # modelmatrix, etc -- yeah na
 
 # TODO: show methods
-# TODO: Serialization methods or maybe FileIO.save?
+# TODO: maybe FileIO.save?
+"""
+    save_summary(filename, summary::MixedModelSummary)
+
+Serialize a `MixedModelSummary` to `filename`.
+"""
+function save_summary(filename, summary::MixedModelSummary)
+    return jldsave(filename; summary=summary)
+end
+
+"""
+    load_summary(filename)
+
+Deserialize a `MixedModelSummary` from `filename`.
+"""
+function load_summary(filename)
+    return jldopen(filename, "r") do file
+        "summary" == only(keys(file)) ||
+            error("Was expecting only find a summary, " *
+                  "found $(collect(keys(dict)))")
+        vv = file["summary"]
+        vv isa MixedModelSummary ||
+            error("Was expecting to find a MixedModelSummary, " *
+                  "found $(typeof(vv))")
+        return vv
+    end
+end
 
 end # module
