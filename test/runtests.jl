@@ -8,17 +8,17 @@ kb07 = dataset(:kb07)
 
 fm1 = fit(MixedModel,
           @formula(rt_trunc ~ 1 + spkr * prec * load +
-                             (1 + spkr + prec | subj) +
-                             (1 + load|item)), kb07)
+                              (1 + spkr + prec | subj) +
+                              (1 + load | item)), kb07)
 mms = MixedModelSummary(fm1)
 
 @testset "StatsAPI" begin
     statsapi = [coef, coefnames,
-            stderror,
-            loglikelihood, deviance,
-            aic, aicc, bic,
-            dof, dof_residual,
-            nobs, vcov]
+                stderror,
+                loglikelihood, deviance,
+                aic, aicc, bic,
+                dof, dof_residual,
+                nobs, vcov]
 
     for f in statsapi
         @test f(fm1) == f(mms)
@@ -37,10 +37,10 @@ end
 @testset "MixedModels" begin
     # fixef, fixefnames, nθ
     mixedmodels = [fnames,
-                issingular, lowerbd,
-                MixedModels.PCA,
-                MixedModels.rePCA,
-                VarCorr]
+                   issingular, lowerbd,
+                   MixedModels.PCA,
+                   MixedModels.rePCA,
+                   VarCorr]
     for f in mixedmodels
         @test f(fm1) == f(mms)
     end

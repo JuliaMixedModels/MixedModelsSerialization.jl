@@ -8,8 +8,7 @@ makedocs(; modules=[MixedModelsSerialization],
          format=Documenter.HTML(; prettyurls=get(ENV, "CI", "false") == "true",
                                 canonical="https://juliamixedmodels.github.io/MixedModelsSerialization.jl",
                                 assets=String[]),
-         pages=[#"Home" => "index.md",
-                "API" => "api.md"])
+         pages=["API" => "api.md"])
 
 deploydocs(; repo="github.com/JuliaMixedModels/MixedModelsSerialization.jl",
            devbranch="main",

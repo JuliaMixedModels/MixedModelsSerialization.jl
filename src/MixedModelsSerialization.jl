@@ -9,7 +9,6 @@ using StatsBase
 using StatsFuns
 using StatsModels
 
-
 # should this be <: MixedModel?
 abstract type MixedModelSummary{T} <: MixedModel{T} end
 # Not for use with rank deficient models
@@ -18,7 +17,7 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     cnames::Vector{String}
     se::Vector{T}
     θ::Vector{T}
-    dims::NamedTuple{(:n, :p, :nretrms), NTuple{3, Int}}
+    dims::NamedTuple{(:n, :p, :nretrms),NTuple{3,Int}}
     varcorr::VarCorr
     formula::FormulaTerm
     optsum::OptSummary{T}
@@ -42,7 +41,8 @@ function MixedModelSummary(m::LinearMixedModel{T}) where {T}
     varcov = vcov(m)
     pca = MixedModels.PCA(m)
 
-    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, varcorr, formula, optsum, loglik, varcov, pca)
+    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, varcorr, formula, optsum,
+                                      loglik, varcov, pca)
 end
 
 # freebies: StatsAPI.aic, StatsAPI.aicc, StatsAPI.bic
@@ -56,13 +56,11 @@ function StatsAPI.coeftable(mms::MixedModelSummary)
     pvalue = 2 .* normccdf.(abs.(z))
     names = copy(coefnames(mms))
 
-    return StatsBase.CoefTable(
-        hcat(co, se, z, pvalue),
-        ["Coef.", "Std. Error", "z", "Pr(>|z|)"],
-        names,
-        4, # pvalcol
-        3, # teststatcol
-    )
+    return StatsBase.CoefTable(hcat(co, se, z, pvalue),
+                               ["Coef.", "Std. Error", "z", "Pr(>|z|)"],
+                               names,
+                               4, # pvalcol
+                               3)
 end
 StatsAPI.loglikelihood(mms::MixedModelSummary) = mms.loglik
 StatsAPI.deviance(mms::MixedModelSummary) = -2 * loglikelihood(mms)
@@ -100,7 +98,7 @@ StatsAPI.islinear(mms::LinearMixedModelSummary) = true
 function GLM.dispersion(mms::LinearMixedModelSummary, sqr::Bool=false)
     vc = VarCorr(mms)
     d = vc.s
-    return sqr ? d*d : d
+    return sqr ? d * d : d
 end
 # fitted, residuals, leverage, etc -- full model
 # ranefTables and condVarTables -- need the full model; sorry bud
