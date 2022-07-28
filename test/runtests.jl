@@ -5,11 +5,12 @@ using Test
 using MixedModels: dataset
 
 kb07 = dataset(:kb07)
+progress = false
 
 fm1 = fit(MixedModel,
           @formula(rt_trunc ~ 1 + spkr * prec * load +
                               (1 + spkr + prec | subj) +
-                              (1 + load | item)), kb07)
+                              (1 + load | item)), kb07; progress)
 mms = MixedModelSummary(fm1)
 
 @testset "StatsAPI" begin
