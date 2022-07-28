@@ -26,7 +26,7 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     pca::NamedTuple # MixedModels.PCA
 end
 
-export MixedModelSummary
+export MixedModelSummary, LinearMixedModelSummary
 
 function MixedModelSummary(m::LinearMixedModel{T}) where {T}
     β = coef(m)
