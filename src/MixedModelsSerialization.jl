@@ -104,4 +104,7 @@ end
 # ranefTables and condVarTables -- need the full model; sorry bud
 # modelmatrix, etc -- yeah na
 
+# TODO: show methods
+# TODO: Serialization methods or maybe FileIO.save?
+
 end # module
