@@ -165,7 +165,7 @@ end
 """
     load_summary(filename)
 
-Deserialize a `MixedModelSummary` from `filename.
+Deserialize a `MixedModelSummary` from `filename`.
 """
 function load_summary(filename)
     return jldopen(filename, "r") do file
