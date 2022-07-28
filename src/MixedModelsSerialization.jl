@@ -153,11 +153,20 @@ end
 
 # TODO: show methods
 # TODO: maybe FileIO.save?
+"""
+    save_summary(filename, summary::MixedModelSummary)
 
-function save_summary(filename, summary)
+Serialize a `MixedModelSummary` to `filename`.
+"""
+function save_summary(filename, summary::MixedModelSummary)
     return jldsave(filename; summary=summary)
 end
 
+"""
+    load_summary(filename)
+
+Deserialize a `MixedModelSummary` from `filename.
+"""
 function load_summary(filename)
     return jldopen(filename, "r") do file
         "summary" == only(keys(file)) ||
