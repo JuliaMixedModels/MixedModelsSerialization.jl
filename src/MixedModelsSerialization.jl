@@ -1,5 +1,6 @@
 module MixedModelsSerialization
 
+using GLM
 using LinearAlgebra
 using MixedModels
 using SparseArrays
@@ -78,19 +79,29 @@ end
 
 StatsModels.formula(mms::MixedModelSummary) = mms.formula
 
-# MixedModels.fixef[names]
-# MixedModels.fnames
-# MixedModels.issingular
-# MixedModels.lowerbd
-# MixedModels.nθ
-# MixedModels.PCA
-# MixedModels.rePCA
-# GLM.dispersion
-# GLM.dispersion_parameter
+# freebies: MixedModels.issingular
 
+# MixedModels.fixef[names]
+MixedModels.fnames(mms::MixedModelSummary) = keys(mms.pca)
+MixedModels.lowerbd(mms::MixedModelSummary) = mms.optsum.lowerbd
+MixedModels.VarCorr(mms::MixedModelSummary) = mms.varcorr
+# MixedModels.nθ
+# only stored on the covariance scale
+# don't yet support doing this on the correlation scale
+MixedModels.PCA(mms::MixedModelSummary) = mms.pca
+function MixedModels.rePCA(mms::MixedModelSummary)
+    return NamedTuple{keys(mms.pca)}(getproperty.(values(mms.pca), :cumvar))
+end
+
+# GLM.dispersion_parameter(mms::LinearMixedModelSummary)
 # linear only
 StatsAPI.islinear(mms::LinearMixedModelSummary) = true
 
+function GLM.dispersion(mms::LinearMixedModelSummary, sqr::Bool=false)
+    vc = VarCorr(mms)
+    d = vc.s
+    return sqr ? d*d : d
+end
 # fitted, residuals, leverage, etc -- full model
 # ranefTables and condVarTables -- need the full model; sorry bud
 # modelmatrix, etc -- yeah na
