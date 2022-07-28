@@ -15,7 +15,6 @@ using JLD2
 export MixedModelSummary, LinearMixedModelSummary
 export save_summary, load_summary
 
-
 """
     MixedModelSummary{T} <: MixedModel{T}
     MixedModelSummary(m::LinearMixedModel)
@@ -161,12 +160,12 @@ end
 
 function load_summary(filename)
     return jldopen(filename, "r") do file
-      "summary" == only(keys(file)) ||
-        error("Was expecting only find a summary, " *
-              "found $(collect(keys(dict)))")
+        "summary" == only(keys(file)) ||
+            error("Was expecting only find a summary, " *
+                  "found $(collect(keys(dict)))")
         vv = file["summary"]
         vv isa MixedModelSummary ||
-          error("Was expecting to find a MixedModelSummary, " *
+            error("Was expecting to find a MixedModelSummary, " *
                   "found $(typeof(vv))")
         return vv
     end
