@@ -22,6 +22,8 @@ Arrow = "2"
 Effects = "0.1"
 GLM = "1"
 JSON3 = "1"
+Legolas = "0.4"
 StatsAPI = "1"
 StatsBase = "0.33"
 StatsModels = "0.6"
+
