@@ -4,11 +4,9 @@ authors = ["Phillip Alday <me@phillipalday.com>"]
 version = "0.1.0"
 
 [deps]
-Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 Effects = "8f03c58b-bd97-4933-a826-f71b64d2cca2"
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-Legolas = "741b9549-f6ed-4911-9fbf-4a1c0c97f0cd"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MixedModels = "ff71e718-51f3-5ec2-a782-8ffcbfa3c316"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
