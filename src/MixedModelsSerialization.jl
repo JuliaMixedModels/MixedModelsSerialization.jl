@@ -19,7 +19,6 @@ export save_summary, load_summary
 # ranefTables and condVarTables -- need the full model; sorry bud
 # modelmatrix, etc -- yeah na
 
-
 """
     MixedModelSummary{T} <: MixedModel{T}
     MixedModelSummary(m::LinearMixedModel)
@@ -99,7 +98,8 @@ function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     varcov = vcov(m)
     pca = MixedModels.PCA(m)
 
-    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula, optsum,
+    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula,
+                                      optsum,
                                       loglik, varcov, pca)
 end
 
@@ -108,7 +108,7 @@ end
 function Base.size(mms::MixedModelSummary)
     dd = mms.dims
     n_blups = sum(mms.reterms) do grp
-       return length(grp.cnames) * grp.nlevs
+        return length(grp.cnames) * grp.nlevs
     end
     return dd.n, dd.p, n_blups, dd.nretrms
 end
@@ -233,7 +233,6 @@ function Base.show(io::IO, ::MIME"text/plain", m::LinearMixedModelSummary)
     return show(io, coeftable(m))
 end
 
-
 #####
 ##### Serialization
 #####
@@ -276,13 +275,12 @@ function Base.getproperty(mms::LinearMixedModelSummary, p::Symbol)
         vc = VarCorr(mms)
         # gen = (NamedTuple{filter(!=(:ρ), keys(nt))}(nt) for nt in vc.σρ)
         NamedTuple{keys(vc.σρ)}((vv.σ for vv in values(vc.σρ)))
-    # elseif p == :reterms
-    #     # this is what the show methods actually use
-    #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
+        # elseif p == :reterms
+        #     # this is what the show methods actually use
+        #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
     else
         getfield(mms, p)
     end
 end
-
 
 end # module
