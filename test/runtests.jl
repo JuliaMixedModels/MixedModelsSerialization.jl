@@ -79,3 +79,11 @@ end
 #     refgrid = DataFrame(; spkr=["old", "new"],)
 #     effects(design, mms)
 # end
+
+@testset "show" begin
+    @test sprint(show, mms) == sprint(show, fm1)
+    for out in ["markdown", "latex", "xelatex"]
+        mime = MIME(string("text/",out))
+        @test sprint(show, mime, mms) == sprint(show, mime, fm1)
+    end
+end

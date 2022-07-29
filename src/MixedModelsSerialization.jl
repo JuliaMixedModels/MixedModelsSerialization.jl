@@ -10,8 +10,8 @@ using StatsFuns
 using StatsModels
 
 using JLD2
-# using FileIO: File, @format_str
 
+using Base: Ryu
 export MixedModelSummary, LinearMixedModelSummary
 export save_summary, load_summary
 
@@ -65,10 +65,11 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     se::Vector{T}
     θ::Vector{T}
     dims::NamedTuple{(:n, :p, :nretrms),NTuple{3,Int}}
+    reterms::NamedTuple
     varcorr::VarCorr
     formula::FormulaTerm
     optsum::OptSummary{T}
-    loglik::Real # we can compute deviance, AIC, AICc, BIC from this
+    loglik::T # we can compute deviance, AIC, AICc, BIC from this
     varcov::Matrix{T}
     pca::NamedTuple # MixedModels.PCA
 end
@@ -81,6 +82,11 @@ function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     se = stderror(m)
     θ = m.θ
     dims = m.dims
+    reterms = let
+        kk = Symbol.(getproperty.(m.reterms, :trm))
+        vv = ((; cnames=re.cnames, nlevs=MixedModels.nlevs(re)) for re in m.reterms)
+        NamedTuple(zip(kk, vv))
+    end
     varcorr = VarCorr(m)
     formula = m.formula
     optsum = m.optsum
@@ -88,10 +94,19 @@ function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     varcov = vcov(m)
     pca = MixedModels.PCA(m)
 
-    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, varcorr, formula, optsum,
+    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula, optsum,
                                       loglik, varcov, pca)
 end
 
+# we can skip store this explicitly if we store
+# the BLUPs or at least their names
+function Base.size(mms::MixedModelSummary)
+    dd = mms.dims
+    n_blups = sum(mms.reterms) do grp
+       return length(grp.cnames) * grp.nlevs
+    end
+    return dd.n, dd.p, n_blups, dd.nretrms
+end
 # freebies: StatsAPI.aic, StatsAPI.aicc, StatsAPI.bic
 
 StatsAPI.coef(mms::MixedModelSummary) = mms.β
@@ -129,6 +144,7 @@ StatsModels.formula(mms::MixedModelSummary) = mms.formula
 # MixedModels.fixef[names]
 MixedModels.fnames(mms::MixedModelSummary) = keys(mms.pca)
 MixedModels.lowerbd(mms::MixedModelSummary) = mms.optsum.lowerbd
+MixedModels.objective(mms::MixedModelSummary) = deviance(mms)
 MixedModels.VarCorr(mms::MixedModelSummary) = mms.varcorr
 # MixedModels.nθ
 # only stored on the covariance scale
@@ -178,6 +194,57 @@ function load_summary(filename)
                   "found $(typeof(vv))")
         return vv
     end
+end
+
+function Base.getproperty(mms::LinearMixedModelSummary, p::Symbol)
+    # XXX temporary hacks to get around some property access
+    # in MixedModels show() methods
+    return if p == :σs
+        vc = VarCorr(mms)
+        # gen = (NamedTuple{filter(!=(:ρ), keys(nt))}(nt) for nt in vc.σρ)
+        NamedTuple{keys(vc.σρ)}((vv.σ for vv in values(vc.σρ)))
+    # elseif p == :reterms
+    #     # this is what the show methods actually use
+    #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
+    else
+        getfield(mms, p)
+    end
+end
+
+MixedModels._dname(::LinearMixedModelSummary) = "Residual"
+
+Base.show(io::IO, mms::LinearMixedModelSummary) = show(io, MIME("text/plain"), mms)
+function Base.show(io::IO, ::MIME"text/plain", m::LinearMixedModelSummary)
+    if m.optsum.feval < 0
+        @warn("Model has not been fit")
+        return nothing
+    end
+    n, p, q, k = size(m)
+    REML = m.optsum.REML
+    println(io, "Linear mixed model fit by ", REML ? "REML" : "maximum likelihood")
+    println(io, " ", m.formula)
+    oo = objective(m)
+    if REML
+        println(io, " REML criterion at convergence: ", oo)
+    else
+        nums = Ryu.writefixed.([-oo / 2, oo, aic(m), aicc(m), bic(m)], 4)
+        fieldwd = max(maximum(textwidth.(nums)) + 1, 11)
+        for label in ["  logLik", "-2 logLik", "AIC", "AICc", "BIC"]
+            print(io, rpad(lpad(label, (fieldwd + textwidth(label)) >> 1), fieldwd))
+        end
+        println(io)
+        print.(Ref(io), lpad.(nums, fieldwd))
+        println(io)
+    end
+    println(io)
+
+    show(io, VarCorr(m))
+
+    print(io, " Number of obs: $n; levels of grouping factors: ")
+    join(io, (re.nlevs for re in values(m.reterms)), ", ")
+    println(io)
+    println(io, "\n  Fixed-effects parameters:")
+    return show(io, coeftable(m))
 end
 
 end # module
