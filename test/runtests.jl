@@ -1,5 +1,4 @@
-# using DataFrames
-# using Effects
+using Effects
 using MixedModels
 using MixedModelsSerialization
 using Test
@@ -82,11 +81,43 @@ end
 end
 
 # need typify support or a way to create a pseudo modelmatrix()
-# @testset "Effects.jl compat" begin
-#     design = Dict(:spkr => ["old", "new"])
-#     refgrid = DataFrame(; spkr=["old", "new"],)
-#     effects(design, mms)
-# end
+@testset "modelmatrix" begin
+    fm1a = fit(MixedModel,
+            @formula(rt_trunc ~ 1 +  prec & load +
+                                (1 | subj) +
+                                (1 | item)), kb07; progress)
+    mmsa = MixedModelSummary(fm1a)
+    @test_throws ArgumentError modelmatrix(mmsa)
+
+    # want exact elementwise equality
+    @test all(modelmatrix(mms2) .== [1.0 0.0; 1.0 4.5; 1.0 9.0])
+
+    mat =  [1  0  0  0  0  0  0  0
+            1  1  0  0  0  0  0  0
+            1  0  1  0  0  0  0  0
+            1  1  1  0  1  0  0  0
+            1  0  0  1  0  0  0  0
+            1  1  0  1  0  1  0  0
+            1  0  1  1  0  0  1  0
+            1  1  1  1  1  1  1  1]
+    @test all(modelmatrix(mms) .== mat)
+
+end
+
+@testset "Effects.jl compat" begin
+    design = Dict(:days => [4.2])
+    @test effects(design, mms2) == effects(design, fm2)
+
+    design = Dict(:load => ["no", "yes"])
+    # the data aren't perfectly balanced,
+    # but they're close so the values here are quite close
+    emms = effects(design, mms)
+    efm1 = effects(design, fm1)
+    @test emms.load == efm1.load
+    for cn in names(efm1, Number)
+        @test all(isapprox.(emms[!, cn], efm1[!, cn]; rtol=0.001))
+    end
+end
 
 @testset "show" begin
     @test sprint(show, mms) == sprint(show, fm1)

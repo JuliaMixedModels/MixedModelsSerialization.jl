@@ -12,8 +12,12 @@ using StatsModels
 using JLD2
 
 using Base: Ryu
+using StatsModels: TupleTerm
+
 export MixedModelSummary, LinearMixedModelSummary
 export save_summary, load_summary
+
+include("utils.jl")
 
 # fitted, residuals, leverage, etc -- full model
 # ranefTables and condVarTables -- need the full model; sorry bud
@@ -150,6 +154,53 @@ function StatsAPI.loglikelihood(mms::MixedModelSummary)
         throw(ArgumentError("loglikelihood not available for models fit by REML"))
     end
     return -objective(mms) / 2
+end
+
+"""
+    StatsAPI.modelmatrix(mms::MixedModelSummary)
+
+Return a "summary" model matrix (of the fixed effects).
+
+The summary model matrix is generated so:
+1. Find reference values for all categorical
+   and continuous terms. For categorical terms
+   these are the levels. For continuous terms,
+   these are the min, mean and max from the original
+   data used to build the model.
+2. Compute a fake dataset consisting of the Cartesian
+   product of all these variables, i.e. a fully
+   crossed design using the reference values.
+3. Call `modelcols` using the fixed effects terms and
+   the fake dataset.
+
+The purpose of this fake model matrix is to support
+packages like `Effects.jl`. For continuous predictors,
+the the min, mean, and max are preserved, so these are
+good typical values. For categorical predictors, the
+balance is not preserved, so a good default typical value
+is "mean", i.e. the unweighted average of all levels.
+Of course, you can always specify the relevant reference
+values and avoid the typical values computation for a given
+term.
+
+!!! warning
+    This is not the model matrix of the original model.
+
+!!! warning
+    The Balance of levels of categorical terms from the
+    original model is not preserved.
+
+!!! note
+    There is currently no support for interaction terms
+    without a corresponding main effect.
+"""
+function StatsAPI.modelmatrix(mms::MixedModelSummary)
+    rhs = mms.formula.rhs[1].terms
+    vals = filter(!isempty, _vals.(rhs, Ref(rhs)))
+    names = _names(rhs)
+    dat = reshape(collect(Iterators.product(vals...)), :)
+    tbl = NamedTuple{names}.(dat)
+    return modelcols(mms.formula.rhs[1], tbl)
 end
 
 StatsAPI.nobs(mms::MixedModelSummary) = mms.dims[:n]
