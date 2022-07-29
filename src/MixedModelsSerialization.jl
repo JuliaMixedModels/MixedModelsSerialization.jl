@@ -15,6 +15,11 @@ using Base: Ryu
 export MixedModelSummary, LinearMixedModelSummary
 export save_summary, load_summary
 
+# fitted, residuals, leverage, etc -- full model
+# ranefTables and condVarTables -- need the full model; sorry bud
+# modelmatrix, etc -- yeah na
+
+
 """
     MixedModelSummary{T} <: MixedModel{T}
     MixedModelSummary(m::LinearMixedModel)
@@ -107,9 +112,14 @@ function Base.size(mms::MixedModelSummary)
     end
     return dd.n, dd.p, n_blups, dd.nretrms
 end
-# freebies: StatsAPI.aic, StatsAPI.aicc, StatsAPI.bic
 
+#####
+##### StatsAPI
+#####
+
+# freebies: StatsAPI.aic, StatsAPI.aicc, StatsAPI.bic
 StatsAPI.coef(mms::MixedModelSummary) = mms.β
+
 StatsAPI.coefnames(mms::MixedModelSummary) = mms.cnames
 function StatsAPI.coeftable(mms::MixedModelSummary)
     co = copy(coef(mms))
@@ -124,98 +134,74 @@ function StatsAPI.coeftable(mms::MixedModelSummary)
                                4, # pvalcol
                                3)
 end
-StatsAPI.loglikelihood(mms::MixedModelSummary) = mms.loglik
+
 StatsAPI.deviance(mms::MixedModelSummary) = -2 * loglikelihood(mms)
-StatsAPI.stderror(mms::MixedModelSummary) = mms.se
+
 function StatsAPI.dof(mms::MixedModelSummary)
     return mms.dims[:p] + length(mms.θ) + dispersion_parameter(mms)
 end
+
 StatsAPI.dof_residual(mms::MixedModelSummary) = nobs(mms) - dof(mms)
+
+StatsAPI.islinear(mms::LinearMixedModelSummary) = true
+
+StatsAPI.loglikelihood(mms::MixedModelSummary) = mms.loglik
+
 StatsAPI.nobs(mms::MixedModelSummary) = mms.dims[:n]
+
+StatsAPI.stderror(mms::MixedModelSummary) = mms.se
+
 function StatsAPI.vcov(mms::MixedModelSummary; corr=false)
     vv = mms.varcov
     return corr ? StatsBase.cov2cor!(vv, stderror(mms)) : vv
 end
 
+#####
+##### StatsModels
+#####
+
 StatsModels.formula(mms::MixedModelSummary) = mms.formula
 
-# freebies: MixedModels.issingular
+#####
+##### GLM.jl
+#####
 
+# GLM.dispersion_parameter(mms::LinearMixedModelSummary)
+function GLM.dispersion(mms::LinearMixedModelSummary, sqr::Bool=false)
+    vc = VarCorr(mms)
+    d = vc.s
+    return sqr ? d * d : d
+end
+
+#####
+##### MixedModels
+#####
+
+# freebies: MixedModels.issingular
 # MixedModels.fixef[names]
+# MixedModels.nθ
+# MixedModels.nlevs
 MixedModels.fnames(mms::MixedModelSummary) = keys(mms.pca)
 MixedModels.lowerbd(mms::MixedModelSummary) = mms.optsum.lowerbd
 MixedModels.objective(mms::MixedModelSummary) = deviance(mms)
 MixedModels.VarCorr(mms::MixedModelSummary) = mms.varcorr
-# MixedModels.nθ
 # only stored on the covariance scale
 # don't yet support doing this on the correlation scale
 MixedModels.PCA(mms::MixedModelSummary) = mms.pca
 function MixedModels.rePCA(mms::MixedModelSummary)
     return NamedTuple{keys(mms.pca)}(getproperty.(values(mms.pca), :cumvar))
 end
-
-# GLM.dispersion_parameter(mms::LinearMixedModelSummary)
-# linear only
-StatsAPI.islinear(mms::LinearMixedModelSummary) = true
-
-function GLM.dispersion(mms::LinearMixedModelSummary, sqr::Bool=false)
-    vc = VarCorr(mms)
-    d = vc.s
-    return sqr ? d * d : d
-end
-# fitted, residuals, leverage, etc -- full model
-# ranefTables and condVarTables -- need the full model; sorry bud
-# modelmatrix, etc -- yeah na
-
-# TODO: show methods
-# TODO: maybe FileIO.save?
-"""
-    save_summary(filename, summary::MixedModelSummary)
-
-Serialize a `MixedModelSummary` to `filename`.
-"""
-function save_summary(filename, summary::MixedModelSummary)
-    return jldsave(filename; summary=summary)
-end
-
-"""
-    load_summary(filename)
-
-Deserialize a `MixedModelSummary` from `filename`.
-"""
-function load_summary(filename)
-    return jldopen(filename, "r") do file
-        "summary" == only(keys(file)) ||
-            error("Was expecting only find a summary, " *
-                  "found $(collect(keys(dict)))")
-        vv = file["summary"]
-        vv isa MixedModelSummary ||
-            error("Was expecting to find a MixedModelSummary, " *
-                  "found $(typeof(vv))")
-        return vv
-    end
-end
-
-function Base.getproperty(mms::LinearMixedModelSummary, p::Symbol)
-    # XXX temporary hacks to get around some property access
-    # in MixedModels show() methods
-    return if p == :σs
-        vc = VarCorr(mms)
-        # gen = (NamedTuple{filter(!=(:ρ), keys(nt))}(nt) for nt in vc.σρ)
-        NamedTuple{keys(vc.σρ)}((vv.σ for vv in values(vc.σρ)))
-    # elseif p == :reterms
-    #     # this is what the show methods actually use
-    #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
-    else
-        getfield(mms, p)
-    end
-end
-
+# necessary for the MIME show methods
 MixedModels._dname(::LinearMixedModelSummary) = "Residual"
 
+#####
+##### show methods
+#####
+
 Base.show(io::IO, mms::LinearMixedModelSummary) = show(io, MIME("text/plain"), mms)
+
 function Base.show(io::IO, ::MIME"text/plain", m::LinearMixedModelSummary)
-    if m.optsum.feval < 0
+    m.optsum.feval < 0 && begin
         @warn("Model has not been fit")
         return nothing
     end
@@ -246,5 +232,57 @@ function Base.show(io::IO, ::MIME"text/plain", m::LinearMixedModelSummary)
     println(io, "\n  Fixed-effects parameters:")
     return show(io, coeftable(m))
 end
+
+
+#####
+##### Serialization
+#####
+
+"""
+    save_summary(filename, summary::MixedModelSummary)
+
+Serialize a `MixedModelSummary` to `filename`.
+"""
+function save_summary(filename, summary::MixedModelSummary)
+    return jldsave(filename; summary=summary)
+end
+
+"""
+    load_summary(filename)
+
+Deserialize a `MixedModelSummary` from `filename`.
+"""
+function load_summary(filename)
+    return jldopen(filename, "r") do file
+        "summary" == only(keys(file)) ||
+            error("Was expecting only find a summary, " *
+                  "found $(collect(keys(dict)))")
+        vv = file["summary"]
+        vv isa MixedModelSummary ||
+            error("Was expecting to find a MixedModelSummary, " *
+                  "found $(typeof(vv))")
+        return vv
+    end
+end
+
+#####
+##### Things to ditch when we've upstructured upstream a bit
+#####
+
+function Base.getproperty(mms::LinearMixedModelSummary, p::Symbol)
+    # XXX temporary hacks to get around some property access
+    # in MixedModels show() methods
+    return if p == :σs
+        vc = VarCorr(mms)
+        # gen = (NamedTuple{filter(!=(:ρ), keys(nt))}(nt) for nt in vc.σρ)
+        NamedTuple{keys(vc.σρ)}((vv.σ for vv in values(vc.σρ)))
+    # elseif p == :reterms
+    #     # this is what the show methods actually use
+    #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
+    else
+        getfield(mms, p)
+    end
+end
+
 
 end # module

@@ -45,8 +45,7 @@ end
                    MixedModels.rePCA,
                    VarCorr]
     for f in mixedmodels
-        @info f
-        @info f(fm1) == f(mms)
+        @test f(fm1) == f(mms)
     end
     @test sprint(show, coeftable(fm1)) == sprint(show, coeftable(mms))
 end
