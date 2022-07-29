@@ -15,6 +15,13 @@ fm1 = fit(MixedModel,
                               (1 + load | item)), kb07; progress)
 mms = MixedModelSummary(fm1)
 
+fm2 = fit(MixedModel,
+          @formula(reaction ~ 1 + days + (1|subj)),
+          dataset(:sleepstudy);
+          progress,
+          REML=true)
+mms2 = MixedModelSummary(fm2)
+
 @testset "StatsAPI" begin
     statsapi = [coef, coefnames,
                 stderror,
@@ -27,6 +34,7 @@ mms = MixedModelSummary(fm1)
         @test f(fm1) == f(mms)
     end
     @test sprint(show, coeftable(fm1)) == sprint(show, coeftable(mms))
+    @test_throws ArgumentError loglikelihood(mms2)
 end
 
 @testset "StatsModels" begin
@@ -41,8 +49,9 @@ end
     # fixef, fixefnames, nθ
     mixedmodels = [fnames,
                    issingular, lowerbd,
+                   objective,
                    # MixedModels.PCA, seems flaky
-                   MixedModels.rePCA,
+                   MixedModels.rePCA, size,
                    VarCorr]
     for f in mixedmodels
         @test f(fm1) == f(mms)
@@ -85,4 +94,6 @@ end
         mime = MIME(string("text/", out))
         @test sprint(show, mime, mms) == sprint(show, mime, fm1)
     end
+    # REML
+    @test sprint(show, mms2) == sprint(show, fm2)
 end

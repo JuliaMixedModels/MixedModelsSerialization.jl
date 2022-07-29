@@ -19,6 +19,7 @@ export save_summary, load_summary
 # ranefTables and condVarTables -- need the full model; sorry bud
 # modelmatrix, etc -- yeah na
 
+
 """
     MixedModelSummary{T} <: MixedModel{T}
     MixedModelSummary(m::LinearMixedModel)
@@ -73,7 +74,7 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     varcorr::VarCorr
     formula::FormulaTerm
     optsum::OptSummary{T}
-    loglik::T # we can compute deviance, AIC, AICc, BIC from this
+    objective::T # we can compute deviance, AIC, AICc, BIC from this
     varcov::Matrix{T}
     pca::NamedTuple # MixedModels.PCA
 end
@@ -94,13 +95,12 @@ function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     varcorr = VarCorr(m)
     formula = m.formula
     optsum = m.optsum
-    loglik = loglikelihood(m)
+    obj = objective(m)
     varcov = vcov(m)
     pca = MixedModels.PCA(m)
 
-    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula,
-                                      optsum,
-                                      loglik, varcov, pca)
+    return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula, optsum,
+                                      obj, varcov, pca)
 end
 
 # we can skip store this explicitly if we store
@@ -108,7 +108,7 @@ end
 function Base.size(mms::MixedModelSummary)
     dd = mms.dims
     n_blups = sum(mms.reterms) do grp
-        return length(grp.cnames) * grp.nlevs
+       return length(grp.cnames) * grp.nlevs
     end
     return dd.n, dd.p, n_blups, dd.nretrms
 end
@@ -135,7 +135,7 @@ function StatsAPI.coeftable(mms::MixedModelSummary)
                                3)
 end
 
-StatsAPI.deviance(mms::MixedModelSummary) = -2 * loglikelihood(mms)
+StatsAPI.deviance(mms::MixedModelSummary) = objective(mms)
 
 function StatsAPI.dof(mms::MixedModelSummary)
     return mms.dims[:p] + length(mms.θ) + dispersion_parameter(mms)
@@ -145,7 +145,12 @@ StatsAPI.dof_residual(mms::MixedModelSummary) = nobs(mms) - dof(mms)
 
 StatsAPI.islinear(mms::LinearMixedModelSummary) = true
 
-StatsAPI.loglikelihood(mms::MixedModelSummary) = mms.loglik
+function StatsAPI.loglikelihood(mms::MixedModelSummary)
+    if mms.optsum.REML
+        throw(ArgumentError("loglikelihood not available for models fit by REML"))
+    end
+    return -objective(mms) / 2
+end
 
 StatsAPI.nobs(mms::MixedModelSummary) = mms.dims[:n]
 
@@ -183,7 +188,7 @@ end
 # MixedModels.nlevs
 MixedModels.fnames(mms::MixedModelSummary) = keys(mms.pca)
 MixedModels.lowerbd(mms::MixedModelSummary) = mms.optsum.lowerbd
-MixedModels.objective(mms::MixedModelSummary) = deviance(mms)
+MixedModels.objective(mms::MixedModelSummary) = mms.objective
 MixedModels.VarCorr(mms::MixedModelSummary) = mms.varcorr
 # only stored on the covariance scale
 # don't yet support doing this on the correlation scale
@@ -273,14 +278,11 @@ function Base.getproperty(mms::LinearMixedModelSummary, p::Symbol)
     # in MixedModels show() methods
     return if p == :σs
         vc = VarCorr(mms)
-        # gen = (NamedTuple{filter(!=(:ρ), keys(nt))}(nt) for nt in vc.σρ)
         NamedTuple{keys(vc.σρ)}((vv.σ for vv in values(vc.σρ)))
-        # elseif p == :reterms
-        #     # this is what the show methods actually use
-        #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
     else
         getfield(mms, p)
     end
 end
+
 
 end # module
