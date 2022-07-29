@@ -12,8 +12,12 @@ using StatsModels
 using JLD2
 
 using Base: Ryu
+using StatsModels: TupleTerm
+
 export MixedModelSummary, LinearMixedModelSummary
 export save_summary, load_summary
+
+include("utils.jl")
 
 # fitted, residuals, leverage, etc -- full model
 # ranefTables and condVarTables -- need the full model; sorry bud
@@ -73,7 +77,7 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     varcorr::VarCorr
     formula::FormulaTerm
     optsum::OptSummary{T}
-    loglik::T # we can compute deviance, AIC, AICc, BIC from this
+    objective::T # we can compute deviance, AIC, AICc, BIC from this
     varcov::Matrix{T}
     pca::NamedTuple # MixedModels.PCA
 end
@@ -94,13 +98,13 @@ function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     varcorr = VarCorr(m)
     formula = m.formula
     optsum = m.optsum
-    loglik = loglikelihood(m)
+    obj = objective(m)
     varcov = vcov(m)
     pca = MixedModels.PCA(m)
 
     return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula,
                                       optsum,
-                                      loglik, varcov, pca)
+                                      obj, varcov, pca)
 end
 
 # we can skip store this explicitly if we store
@@ -135,7 +139,7 @@ function StatsAPI.coeftable(mms::MixedModelSummary)
                                3)
 end
 
-StatsAPI.deviance(mms::MixedModelSummary) = -2 * loglikelihood(mms)
+StatsAPI.deviance(mms::MixedModelSummary) = objective(mms)
 
 function StatsAPI.dof(mms::MixedModelSummary)
     return mms.dims[:p] + length(mms.θ) + dispersion_parameter(mms)
@@ -145,7 +149,60 @@ StatsAPI.dof_residual(mms::MixedModelSummary) = nobs(mms) - dof(mms)
 
 StatsAPI.islinear(mms::LinearMixedModelSummary) = true
 
-StatsAPI.loglikelihood(mms::MixedModelSummary) = mms.loglik
+function StatsAPI.loglikelihood(mms::MixedModelSummary)
+    if mms.optsum.REML
+        throw(ArgumentError("loglikelihood not available for models fit by REML"))
+    end
+    return -objective(mms) / 2
+end
+
+"""
+    StatsAPI.modelmatrix(mms::MixedModelSummary)
+
+Return a "summary" model matrix (of the fixed effects).
+
+The summary model matrix is generated so:
+1. Find reference values for all categorical
+   and continuous terms. For categorical terms
+   these are the levels. For continuous terms,
+   these are the min, mean and max from the original
+   data used to build the model.
+2. Compute a fake dataset consisting of the Cartesian
+   product of all these variables, i.e. a fully
+   crossed design using the reference values.
+3. Call `modelcols` using the fixed effects terms and
+   the fake dataset.
+
+The purpose of this fake model matrix is to support
+packages like [Effects.jl](https://beacon-biosignals.github.io/Effects.jl/stable/).
+For continuous predictors,the the min, mean, and max
+are preserved, so these aregood typical values.
+For categorical predictors, the balance is not preserved,
+so a good default typical value is `mean`,
+i.e. the unweighted average of all levels.
+Of course, you can always specify the relevant reference
+values and avoid the typical values computation for a given
+term.
+
+!!! warning
+    This is not the model matrix of the original model.
+
+!!! warning
+    The balance of levels of categorical terms from the
+    original model is not preserved.
+
+!!! note
+    There is currently no support for interaction terms
+    without a corresponding main effect.
+"""
+function StatsAPI.modelmatrix(mms::MixedModelSummary)
+    rhs = mms.formula.rhs[1].terms
+    vals = filter(!isempty, _vals.(rhs, Ref(rhs)))
+    names = _names(rhs)
+    dat = reshape(collect(Iterators.product(vals...)), :)
+    tbl = NamedTuple{names}.(dat)
+    return modelcols(mms.formula.rhs[1], tbl)
+end
 
 StatsAPI.nobs(mms::MixedModelSummary) = mms.dims[:n]
 
@@ -183,7 +240,7 @@ end
 # MixedModels.nlevs
 MixedModels.fnames(mms::MixedModelSummary) = keys(mms.pca)
 MixedModels.lowerbd(mms::MixedModelSummary) = mms.optsum.lowerbd
-MixedModels.objective(mms::MixedModelSummary) = deviance(mms)
+MixedModels.objective(mms::MixedModelSummary) = mms.objective
 MixedModels.VarCorr(mms::MixedModelSummary) = mms.varcorr
 # only stored on the covariance scale
 # don't yet support doing this on the correlation scale
@@ -273,11 +330,7 @@ function Base.getproperty(mms::LinearMixedModelSummary, p::Symbol)
     # in MixedModels show() methods
     return if p == :σs
         vc = VarCorr(mms)
-        # gen = (NamedTuple{filter(!=(:ρ), keys(nt))}(nt) for nt in vc.σρ)
         NamedTuple{keys(vc.σρ)}((vv.σ for vv in values(vc.σρ)))
-        # elseif p == :reterms
-        #     # this is what the show methods actually use
-        #     [ (; cnames=string.(keys(re[:σ]))) for re in VarCorr(mms).σρ]
     else
         getfield(mms, p)
     end
