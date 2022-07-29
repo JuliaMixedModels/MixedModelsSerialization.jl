@@ -174,11 +174,12 @@ The summary model matrix is generated so:
    the fake dataset.
 
 The purpose of this fake model matrix is to support
-packages like `Effects.jl`. For continuous predictors,
-the the min, mean, and max are preserved, so these are
-good typical values. For categorical predictors, the
-balance is not preserved, so a good default typical value
-is "mean", i.e. the unweighted average of all levels.
+packages like [Effects.jl](https://beacon-biosignals.github.io/Effects.jl/stable/).
+For continuous predictors,the the min, mean, and max
+are preserved, so these aregood typical values.
+For categorical predictors, the balance is not preserved,
+so a good default typical value is `mean`,
+i.e. the unweighted average of all levels.
 Of course, you can always specify the relevant reference
 values and avoid the typical values computation for a given
 term.
@@ -187,7 +188,7 @@ term.
     This is not the model matrix of the original model.
 
 !!! warning
-    The Balance of levels of categorical terms from the
+    The balance of levels of categorical terms from the
     original model is not preserved.
 
 !!! note
