@@ -45,8 +45,7 @@ end
                    MixedModels.rePCA,
                    VarCorr]
     for f in mixedmodels
-        @info f
-        @info f(fm1) == f(mms)
+        @test f(fm1) == f(mms)
     end
     @test sprint(show, coeftable(fm1)) == sprint(show, coeftable(mms))
 end
@@ -79,3 +78,11 @@ end
 #     refgrid = DataFrame(; spkr=["old", "new"],)
 #     effects(design, mms)
 # end
+
+@testset "show" begin
+    @test sprint(show, mms) == sprint(show, fm1)
+    for out in ["markdown", "latex", "xelatex"]
+        mime = MIME(string("text/", out))
+        @test sprint(show, mime, mms) == sprint(show, mime, fm1)
+    end
+end
