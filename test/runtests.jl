@@ -16,7 +16,7 @@ fm1 = fit(MixedModel,
 mms = MixedModelSummary(fm1)
 
 fm2 = fit(MixedModel,
-          @formula(reaction ~ 1 + days + (1|subj)),
+          @formula(reaction ~ 1 + days + (1 | subj)),
           dataset(:sleepstudy);
           progress,
           REML=true)
