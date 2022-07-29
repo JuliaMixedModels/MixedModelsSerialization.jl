@@ -83,25 +83,24 @@ end
 # need typify support or a way to create a pseudo modelmatrix()
 @testset "modelmatrix" begin
     fm1a = fit(MixedModel,
-            @formula(rt_trunc ~ 1 +  prec & load +
-                                (1 | subj) +
-                                (1 | item)), kb07; progress)
+               @formula(rt_trunc ~ 1 + prec & load +
+                                   (1 | subj) +
+                                   (1 | item)), kb07; progress)
     mmsa = MixedModelSummary(fm1a)
     @test_throws ArgumentError modelmatrix(mmsa)
 
     # want exact elementwise equality
     @test all(modelmatrix(mms2) .== [1.0 0.0; 1.0 4.5; 1.0 9.0])
 
-    mat =  [1  0  0  0  0  0  0  0
-            1  1  0  0  0  0  0  0
-            1  0  1  0  0  0  0  0
-            1  1  1  0  1  0  0  0
-            1  0  0  1  0  0  0  0
-            1  1  0  1  0  1  0  0
-            1  0  1  1  0  0  1  0
-            1  1  1  1  1  1  1  1]
+    mat = [1 0 0 0 0 0 0 0
+           1 1 0 0 0 0 0 0
+           1 0 1 0 0 0 0 0
+           1 1 1 0 1 0 0 0
+           1 0 0 1 0 0 0 0
+           1 1 0 1 0 1 0 0
+           1 0 1 1 0 0 1 0
+           1 1 1 1 1 1 1 1]
     @test all(modelmatrix(mms) .== mat)
-
 end
 
 @testset "Effects.jl compat" begin

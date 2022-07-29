@@ -14,9 +14,10 @@ function _vals(it::InteractionTerm, rhs::TupleTerm)
             throw(ArgumentError("`modelmatrix` is not supported on models " *
                                 "with an interaction without a corresponding" *
                                 " main effect."))
-
     end
     return Float64[]
 end
 
-_names(rhs::TupleTerm) = Symbol.(filter(x -> !isa(x, Union{InterceptTerm, InteractionTerm}), rhs))
+function _names(rhs::TupleTerm)
+    return Symbol.(filter(x -> !isa(x, Union{InterceptTerm,InteractionTerm}), rhs))
+end
