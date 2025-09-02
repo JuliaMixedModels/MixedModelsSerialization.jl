@@ -1,25 +1,8 @@
-using Effects
-using MixedModels
-using MixedModelsSerialization
-using Test
+include("set_up_tests.jl")
 
-using MixedModels: dataset
-
-kb07 = dataset(:kb07)
-progress = false
-
-fm1 = fit(MixedModel,
-          @formula(rt_trunc ~ 1 + spkr * prec * load +
-                              (1 + spkr + prec | subj) +
-                              (1 + load | item)), kb07; progress)
-mms = MixedModelSummary(fm1)
-
-fm2 = fit(MixedModel,
-          @formula(reaction ~ 1 + days + (1 | subj)),
-          dataset(:sleepstudy);
-          progress,
-          REML=true)
-mms2 = MixedModelSummary(fm2)
+@testset ExtendedTestSet "Aqua" begin
+    Aqua.test_all(Effects; ambiguities=false)
+end
 
 @testset "StatsAPI" begin
     statsapi = [coef, coefnames,
