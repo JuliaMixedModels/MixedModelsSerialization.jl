@@ -1,7 +1,7 @@
 name = "MixedModelsSerialization"
 uuid = "b32ace64-3998-4ca6-afd0-a0db4a0482b2"
 authors = ["Phillip Alday <me@phillipalday.com>"]
-version = "0.1.2"
+version = "0.2.0"
 
 [deps]
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
@@ -17,9 +17,9 @@ StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 [compat]
 GLM = "1"
 JLD2 = "0.4.22"
-MixedModels = "4, 5"
+MixedModels = "5"
 StatsAPI = "1"
 StatsBase = "0.33, 0.34"
 StatsFuns = "1"
 StatsModels = "0.7"
-julia = "1.8"
+julia = "1.10"
