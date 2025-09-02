@@ -12,6 +12,7 @@ using StatsModels
 using JLD2
 
 using Base: Ryu
+using MixedModels: lowerbd
 using StatsModels: TupleTerm
 
 export MixedModelSummary, LinearMixedModelSummary
@@ -77,6 +78,7 @@ struct LinearMixedModelSummary{T<:AbstractFloat} <: MixedModelSummary{T}
     varcorr::VarCorr
     formula::FormulaTerm
     optsum::OptSummary{T}
+    lowerbd::Vector{T}
     objective::T # we can compute deviance, AIC, AICc, BIC from this
     varcov::Matrix{T}
     pca::NamedTuple # MixedModels.PCA
@@ -103,8 +105,7 @@ function LinearMixedModelSummary(m::LinearMixedModel{T}) where {T}
     pca = MixedModels.PCA(m)
 
     return LinearMixedModelSummary{T}(β, cnames, se, θ, dims, reterms, varcorr, formula,
-                                      optsum,
-                                      obj, varcov, pca)
+                                      optsum, lowerbd(m), obj, varcov, pca)
 end
 
 # we can skip store this explicitly if we store
@@ -234,12 +235,17 @@ end
 ##### MixedModels
 #####
 
-# freebies: MixedModels.issingular
+function MixedModels.issingular(mms::MixedModelSummary; atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps())
+    return any(zip(lowerbd(mms), mms.θ)) do (x, y)
+        return isapprox(x, y; atol, rtol)
+    end
+end
+
 # MixedModels.fixef[names]
 # MixedModels.nθ
 # MixedModels.nlevs
 MixedModels.fnames(mms::MixedModelSummary) = keys(mms.pca)
-MixedModels.lowerbd(mms::MixedModelSummary) = mms.optsum.lowerbd
+MixedModels.lowerbd(mms::MixedModelSummary) = mms.lowerbd
 MixedModels.objective(mms::MixedModelSummary) = mms.objective
 MixedModels.VarCorr(mms::MixedModelSummary) = mms.varcorr
 # only stored on the covariance scale
