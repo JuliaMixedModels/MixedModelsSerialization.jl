@@ -235,7 +235,8 @@ end
 ##### MixedModels
 #####
 
-function MixedModels.issingular(mms::MixedModelSummary; atol::Real=0, rtol::Real=atol > 0 ? 0 : √eps())
+function MixedModels.issingular(mms::MixedModelSummary; atol::Real=0,
+                                rtol::Real=atol > 0 ? 0 : √eps())
     return any(zip(lowerbd(mms), mms.θ)) do (x, y)
         return isapprox(x, y; atol, rtol)
     end
