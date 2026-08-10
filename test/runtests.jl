@@ -1,7 +1,7 @@
 include("set_up_tests.jl")
 
 @testset ExtendedTestSet "Aqua" begin
-    Aqua.test_all(Effects; ambiguities=false)
+    Aqua.test_all(MixedModelsSerialization; ambiguities=false)
 end
 
 @testset "StatsAPI" begin
