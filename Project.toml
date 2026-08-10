@@ -1,6 +1,6 @@
 name = "MixedModelsSerialization"
 uuid = "b32ace64-3998-4ca6-afd0-a0db4a0482b2"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Phillip Alday <me@phillipalday.com>"]
 
 [deps]
