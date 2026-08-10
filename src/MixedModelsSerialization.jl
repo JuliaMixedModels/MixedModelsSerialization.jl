@@ -130,7 +130,10 @@ function StatsAPI.coeftable(mms::MixedModelSummary)
     co = copy(coef(mms))
     se = copy(stderror(mms))
     z = co ./ se
-    pvalue = 2 .* normccdf.(abs.(z))
+    # use the same code path as MixedModels.jl's own coeftable so that the
+    # values agree bit-for-bit: Distributions' ccdf(Chisq(1), x) delegates
+    # to StatsFuns.chisqccdf
+    pvalue = chisqccdf.(1, abs2.(z))
     names = copy(coefnames(mms))
 
     return StatsBase.CoefTable(hcat(co, se, z, pvalue),
@@ -294,7 +297,7 @@ function Base.show(io::IO, ::MIME"text/plain", m::LinearMixedModelSummary)
     join(io, (re.nlevs for re in values(m.reterms)), ", ")
     println(io)
     println(io, "\n  Fixed-effects parameters:")
-    return show(io, coeftable(m))
+    return show(io, MIME("text/plain"), coeftable(m))
 end
 
 #####

@@ -1,7 +1,7 @@
 include("set_up_tests.jl")
 
 @testset ExtendedTestSet "Aqua" begin
-    Aqua.test_all(Effects; ambiguities=false)
+    Aqua.test_all(MixedModelsSerialization; ambiguities=false)
 end
 
 @testset "StatsAPI" begin
@@ -15,7 +15,8 @@ end
     for f in statsapi
         @test f(fm1) == f(mms)
     end
-    @test sprint(show, coeftable(fm1)) == sprint(show, coeftable(mms))
+    @test sprint(show, MIME("text/plain"), coeftable(fm1)) ==
+          sprint(show, MIME("text/plain"), coeftable(mms))
     @test_throws ArgumentError loglikelihood(mms2)
 end
 
@@ -38,7 +39,8 @@ end
     for f in mixedmodels
         @test f(fm1) == f(mms)
     end
-    @test sprint(show, coeftable(fm1)) == sprint(show, coeftable(mms))
+    @test sprint(show, MIME("text/plain"), coeftable(fm1)) ==
+          sprint(show, MIME("text/plain"), coeftable(mms))
 end
 
 @testset "GLM" begin

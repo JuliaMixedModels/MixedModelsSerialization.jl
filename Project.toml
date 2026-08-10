@@ -1,7 +1,7 @@
 name = "MixedModelsSerialization"
 uuid = "b32ace64-3998-4ca6-afd0-a0db4a0482b2"
+version = "0.2.2"
 authors = ["Phillip Alday <me@phillipalday.com>"]
-version = "0.2.0"
 
 [deps]
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
@@ -22,15 +22,22 @@ Effects = "8f03c58b-bd97-4933-a826-f71b64d2cca2"
 MixedModelsSerializationEffectsExt = ["DataFrames", "Effects"]
 
 [compat]
+Aqua = "0.8"
 DataFrames = "1"
 Effects = "1"
 GLM = "1"
 JLD2 = "0.4.22, 0.5, 0.6"
+LinearAlgebra = "1"
 MixedModels = "5.0.3"
+MixedModelsDatasets = "0.2"
+SparseArrays = "1"
 StatsAPI = "1"
 StatsBase = "0.33, 0.34"
-StatsFuns = "1"
+StatsFuns = "1, 2"
 StatsModels = "0.7"
+Suppressor = "0.2"
+Test = "1"
+TestSetExtensions = "4"
 julia = "1.10"
 
 [extras]
